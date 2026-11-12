@@ -4,7 +4,8 @@
 <p><a href="{{ url_for('jobs.list_jobs') }}">← 返回列表</a></p>
 <section class="card">
   <h1>{{ job.name }}</h1>
-  <p>种子 <code>{{ job.seed_path }}</code> · 状态 <span class="tag {{ job.status }}">{{ job.status }}</span></p>
+  <p>种子 <code>{{ job.seed_path }}</code> · 状态 <span class="tag {{ job.status }}">{{ job.status }}</span>
+    · 建档人 {{ job.created_by or '—' }}</p>
   {% if job.status == 'draft' %}
   <form method="post" action="{{ url_for('jobs.run_job_view', job_id=job.id) }}">
     <button type="submit">运行采集（同步）</button>
@@ -13,19 +14,74 @@
   <p class="muted">已完成于 {{ job.finished_at or '—' }}</p>
   {% endif %}
 </section>
-<section class="card">
-  <h2>落库记录</h2>
-  <table>
-    <thead><tr><th>item_key</th><th>标题</th><th>时间</th></tr></thead>
+
+<section class="card board {{ job.approval_status }}">
+  <div class="board-head">
+    <h2 class="board-sign">
+      {% if job.approval_status == approval_approved %}已点头{% else %}待点头{% endif %}
+    </h2>
+    {% if job.approval_status == approval_approved %}
+    <p class="board-meta">点头人：<strong>{{ job.approved_by }}</strong> · {{ job.approved_at }}</p>
+    {% else %}
+    <p class="board-meta">采集完成后，条目先停在牌子下，暂不进账册。</p>
+    {% endif %}
+  </div>
+
+  <p class="board-guide">
+    流程：运行采集 → 条目停在「待点头」牌子下 → 另填一位与建档人不同的姓名并点「点头」 →
+    条目进入下方账册，牌子改为「已点头」并显示点头人姓名。
+  </p>
+
+  {% if job.approval_status != approval_approved and job.status == 'done' %}
+  <form class="approve-form" method="post" action="{{ url_for('jobs.approve', job_id=job.id) }}">
+    <label>点头人姓名 <input name="approver_name" required placeholder="须与建档人不同" /></label>
+    <button type="submit">点头</button>
+  </form>
+  {% elif job.approval_status != approval_approved %}
+  <p class="muted board-closed">采集未完成，点头入口已收起。</p>
+  {% endif %}
+
+  {% if job.approval_status != approval_approved %}
+  <h3 class="pending-title">牌子下暂存条目（未入账册）</h3>
+  <table class="pending-table">
+    <thead><tr><th>item_key</th><th>题名（可改）</th><th>时间</th></tr></thead>
     <tbody>
-      {% for r in records %}
+      {% for r in pending_records %}
       <tr>
         <td><code>{{ r.item_key }}</code></td>
-        <td>{{ r.title }}</td>
+        <td>
+          <form class="inline-edit" method="post"
+                action="{{ url_for('jobs.rename', job_id=job.id, record_id=r.id) }}">
+            <input name="title" value="{{ r.title }}" required />
+            <button type="submit">保存题名</button>
+          </form>
+        </td>
         <td>{{ r.fetched_at }}</td>
       </tr>
       {% else %}
-      <tr><td colspan="3" class="muted">尚无记录</td></tr>
+      <tr><td colspan="3" class="muted">牌子下目前是空的</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted board-empty">牌子下已清空，条目已进入账册。</p>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>账册</h2>
+  <p class="muted">只收录已点头的条目。</p>
+  <table>
+    <thead><tr><th>item_key</th><th>题名</th><th>时间</th></tr></thead>
+    <tbody>
+      {% for r in ledger_records %}
+      <tr>
+        <td><code>{{ r.item_key }}</code></td>
+        <td>{{ r.title }} <span class="tag done">已点头</span></td>
+        <td>{{ r.fetched_at }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="3" class="muted">账册中暂无条目</td></tr>
       {% endfor %}
     </tbody>
   </table>

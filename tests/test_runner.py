@@ -14,7 +14,11 @@ def test_run_job_dedup_duplicate_title(app, client):
     login(client)
     client.post(
         "/jobs",
-        data={"name": "t1", "seed_path": "/mock/catalog/alpha"},
+        data={
+            "name": "t1",
+            "seed_path": "/mock/catalog/alpha",
+            "created_by": "张三",
+        },
         follow_redirects=True,
     )
     with app.app_context():

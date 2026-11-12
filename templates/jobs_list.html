@@ -5,6 +5,7 @@
   <h1>采集任务</h1>
   <form class="grid-form" method="post" action="{{ url_for('jobs.create_job') }}">
     <label>任务名 <input name="name" placeholder="例：alpha 目录首轮" required /></label>
+    <label>建档人 <input name="created_by" placeholder="建档人姓名" required /></label>
     <label>种子路径
       <select name="seed_path" required>
         {% for s in seeds %}
@@ -19,7 +20,7 @@
   <table>
     <thead>
       <tr>
-        <th>ID</th><th>名称</th><th>种子</th><th>状态</th><th>记录数</th><th></th>
+        <th>ID</th><th>名称</th><th>建档人</th><th>种子</th><th>状态</th><th>账册</th><th>待点头</th><th></th>
       </tr>
     </thead>
     <tbody>
@@ -27,13 +28,15 @@
       <tr>
         <td>{{ j.id }}</td>
         <td>{{ j.name }}</td>
+        <td>{{ j.created_by or '—' }}</td>
         <td><code>{{ j.seed_path }}</code></td>
         <td><span class="tag {{ j.status }}">{{ j.status }}</span></td>
-        <td>{{ counts.get(j.id, 0) }}</td>
+        <td>{{ ledger_counts.get(j.id, 0) }}</td>
+        <td>{{ pending_counts.get(j.id, 0) }}</td>
         <td><a href="{{ url_for('jobs.detail', job_id=j.id) }}">详情</a></td>
       </tr>
       {% else %}
-      <tr><td colspan="6" class="muted">尚无任务，请先创建</td></tr>
+      <tr><td colspan="8" class="muted">尚无任务，请先创建</td></tr>
       {% endfor %}
     </tbody>
   </table>
